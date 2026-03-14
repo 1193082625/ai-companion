@@ -61,7 +61,8 @@ export const ChatPage: React.FC<ChatPageProps> = ({ onOpenSettings }) => {
     setLoading(true);
     clearStreamingContent();
 
-    const session = sessions.find((s) => s.id === sessionId);
+    // 使用 getCurrentSession 获取最新的 session，确保获取到完整的 messages
+    const session = getCurrentSession();
     const config = settings.providers[session?.provider || settings.defaultProvider];
 
     try {

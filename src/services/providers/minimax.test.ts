@@ -103,6 +103,115 @@ describe('MiniMaxProvider', () => {
       // null ?? 0.7 returns 0.7 (nullish coalescing treats null as undefined)
       expect(request.temperature).toBe(0.7);
     });
+
+    // 测试不同格式的消息内容
+    it('should handle Chinese text messages', () => {
+      const messages: Message[] = [
+        { id: '1', role: 'user', content: '你好，请介绍一下自己', timestamp: Date.now() },
+      ];
+      const config: AIConfig = {
+        provider: 'minimax',
+        apiKey: 'test-key',
+      };
+
+      const request = provider.formatRequest(messages, config);
+
+      expect(request.messages).toHaveLength(1);
+      expect(request.messages[0].content).toBe('你好，请介绍一下自己');
+    });
+
+    it('should handle messages with special characters', () => {
+      const messages: Message[] = [
+        { id: '1', role: 'user', content: '测试特殊字符：@#$%^&*()[]{}|\\:"<>?', timestamp: Date.now() },
+      ];
+      const config: AIConfig = {
+        provider: 'minimax',
+        apiKey: 'test-key',
+      };
+
+      const request = provider.formatRequest(messages, config);
+
+      expect(request.messages[0].content).toBe('测试特殊字符：@#$%^&*()[]{}|\\:"<>?');
+    });
+
+    it('should handle multiline text messages', () => {
+      const messages: Message[] = [
+        { id: '1', role: 'user', content: '第一行\n第二行\n第三行', timestamp: Date.now() },
+      ];
+      const config: AIConfig = {
+        provider: 'minimax',
+        apiKey: 'test-key',
+      };
+
+      const request = provider.formatRequest(messages, config);
+
+      expect(request.messages[0].content).toBe('第一行\n第二行\n第三行');
+    });
+
+    it('should handle emoji in messages', () => {
+      const messages: Message[] = [
+        { id: '1', role: 'user', content: '你好 👋😊', timestamp: Date.now() },
+      ];
+      const config: AIConfig = {
+        provider: 'minimax',
+        apiKey: 'test-key',
+      };
+
+      const request = provider.formatRequest(messages, config);
+
+      expect(request.messages[0].content).toBe('你好 👋😊');
+    });
+
+    it('should handle code blocks in messages', () => {
+      const messages: Message[] = [
+        { id: '1', role: 'user', content: '```javascript\nconst a = 1;\n```', timestamp: Date.now() },
+      ];
+      const config: AIConfig = {
+        provider: 'minimax',
+        apiKey: 'test-key',
+      };
+
+      const request = provider.formatRequest(messages, config);
+
+      expect(request.messages[0].content).toContain('```javascript');
+    });
+
+    it('should handle conversation history with multiple messages', () => {
+      const messages: Message[] = [
+        { id: '1', role: 'system', content: '你是一个有帮助的助手', timestamp: Date.now() },
+        { id: '2', role: 'user', content: '什么是AI？', timestamp: Date.now() },
+        { id: '3', role: 'assistant', content: 'AI是人工智能...', timestamp: Date.now() },
+        { id: '4', role: 'user', content: '那机器学习呢？', timestamp: Date.now() },
+      ];
+      const config: AIConfig = {
+        provider: 'minimax',
+        apiKey: 'test-key',
+      };
+
+      const request = provider.formatRequest(messages, config);
+
+      expect(request.messages).toHaveLength(4);
+      expect(request.messages[0].role).toBe('system');
+      expect(request.messages[1].role).toBe('user');
+      expect(request.messages[2].role).toBe('assistant');
+      expect(request.messages[3].role).toBe('user');
+    });
+
+    it('should handle empty content in earlier messages but valid last message', () => {
+      const messages: Message[] = [
+        { id: '1', role: 'system', content: '', timestamp: Date.now() },
+        { id: '2', role: 'user', content: 'Hello', timestamp: Date.now() },
+      ];
+      const config: AIConfig = {
+        provider: 'minimax',
+        apiKey: 'test-key',
+      };
+
+      const request = provider.formatRequest(messages, config);
+
+      // 最后一个消息应该有内容
+      expect(request.messages[request.messages.length - 1].content).toBe('Hello');
+    });
   });
 
   describe('parseResponse', () => {
