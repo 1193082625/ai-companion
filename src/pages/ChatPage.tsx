@@ -20,6 +20,7 @@ export const ChatPage: React.FC<ChatPageProps> = ({ onOpenSettings }) => {
     createSession,
     deleteSession,
     selectSession,
+    updateSessionTitle,
     addMessage,
     setLoading,
     appendStreamingContent,
@@ -100,6 +101,7 @@ export const ChatPage: React.FC<ChatPageProps> = ({ onOpenSettings }) => {
       currentSessionId={currentSessionId}
       onSelectSession={selectSession}
       onDeleteSession={deleteSession}
+      onRenameSession={updateSessionTitle}
       onNewSession={handleNewSession}
       onOpenSettings={onOpenSettings}
     >

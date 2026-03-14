@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import type { ChatSession, WorkMode } from '../types';
 
 interface SessionListProps {
@@ -6,6 +6,7 @@ interface SessionListProps {
   currentSessionId: string | null;
   onSelectSession: (id: string) => void;
   onDeleteSession: (id: string) => void;
+  onRenameSession: (id: string, title: string) => void;
   onNewSession: (type: WorkMode) => void;
 }
 
@@ -50,8 +51,43 @@ export const SessionList: React.FC<SessionListProps> = ({
   currentSessionId,
   onSelectSession,
   onDeleteSession,
+  onRenameSession,
   onNewSession,
 }) => {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editingId && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editingId]);
+
+  const handleStartRename = (e: React.MouseEvent, session: ChatSession) => {
+    e.stopPropagation();
+    setEditingId(session.id);
+    setEditValue(session.title);
+  };
+
+  const handleFinishRename = (id: string) => {
+    if (editValue.trim()) {
+      onRenameSession(id, editValue.trim());
+    }
+    setEditingId(null);
+    setEditValue('');
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent, id: string) => {
+    if (e.key === 'Enter') {
+      handleFinishRename(id);
+    } else if (e.key === 'Escape') {
+      setEditingId(null);
+      setEditValue('');
+    }
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* 新建对话按钮 */}
@@ -108,13 +144,37 @@ export const SessionList: React.FC<SessionListProps> = ({
               </div>
 
               <div className="flex-1 min-w-0">
-                <div className="text-sm text-text-primary truncate font-medium">
-                  {session.title}
-                </div>
+                {editingId === session.id ? (
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    onBlur={() => handleFinishRename(session.id)}
+                    onKeyDown={(e) => handleKeyDown(e, session.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-full px-2 py-1 text-sm bg-bg-tertiary border border-accent rounded text-text-primary focus:outline-none"
+                  />
+                ) : (
+                  <div className="text-sm text-text-primary truncate font-medium">
+                    {session.title}
+                  </div>
+                )}
                 <div className="text-xs text-text-muted">
                   {new Date(session.updatedAt).toLocaleDateString('zh-CN')}
                 </div>
               </div>
+
+              {/* 重命名按钮 */}
+              <button
+                onClick={(e) => handleStartRename(e, session)}
+                className="flex-shrink-0 opacity-0 group-hover:opacity-100 p-1.5 text-text-muted hover:text-accent transition-all"
+                title="重命名"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </button>
 
               <button
                 onClick={(e) => {

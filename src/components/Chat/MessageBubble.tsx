@@ -95,6 +95,38 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
                 </ol>
               ),
               li: ({ children }) => <li className="text-text-primary">{children}</li>,
+              table: ({ children }) => (
+                <div className="overflow-x-auto my-3">
+                  <table className="min-w-full border border-border rounded-lg overflow-hidden">
+                    {children}
+                  </table>
+                </div>
+              ),
+              thead: ({ children }) => (
+                <thead className="bg-bg-tertiary border-b border-border">
+                  {children}
+                </thead>
+              ),
+              tbody: ({ children }) => (
+                <tbody className="divide-y divide-border">
+                  {children}
+                </tbody>
+              ),
+              tr: ({ children }) => (
+                <tr className="hover:bg-bg-tertiary/50 transition-colors">
+                  {children}
+                </tr>
+              ),
+              th: ({ children }) => (
+                <th className="px-4 py-3 text-left text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                  {children}
+                </th>
+              ),
+              td: ({ children }) => (
+                <td className="px-4 py-3 text-sm text-text-primary">
+                  {children}
+                </td>
+              ),
               h1: ({ children }) => (
                 <h1 className="text-xl font-bold text-text-primary mt-4 mb-2">
                   {children}

@@ -8,6 +8,7 @@ interface MainLayoutProps {
   currentSessionId: string | null;
   onSelectSession: (id: string) => void;
   onDeleteSession: (id: string) => void;
+  onRenameSession: (id: string, title: string) => void;
   onNewSession: (type: WorkMode) => void;
   onOpenSettings: () => void;
 }
@@ -18,6 +19,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   currentSessionId,
   onSelectSession,
   onDeleteSession,
+  onRenameSession,
   onNewSession,
   onOpenSettings,
 }) => {
@@ -51,6 +53,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           currentSessionId={currentSessionId}
           onSelectSession={onSelectSession}
           onDeleteSession={onDeleteSession}
+          onRenameSession={onRenameSession}
           onNewSession={onNewSession}
         />
       </div>
