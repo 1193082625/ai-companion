@@ -156,13 +156,13 @@ export const PROVIDERS: ProviderInfo[] = [
 export const DEFAULT_SETTINGS: AppSettings = {
   theme: 'dark',
   defaultProvider: 'minimax',
-  defaultModel: 'MiniMax-M2.5',
+  defaultModel: import.meta.env.VITE_MINIMAX_MODEL || 'MiniMax-M2.5',
   providers: {
     minimax: {
       provider: 'minimax',
-      apiKey: '',
-      baseUrl: 'https://api.minimaxi.com/v1',
-      model: 'MiniMax-M2.5',
+      apiKey: import.meta.env.VITE_MINIMAX_API_KEY || '',
+      baseUrl: import.meta.env.VITE_MINIMAX_BASE_URL || 'https://api.minimaxi.com/v1',
+      model: import.meta.env.VITE_MINIMAX_MODEL || 'MiniMax-M2.5',
       temperature: 0.7,
       maxTokens: 4096,
     },

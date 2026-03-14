@@ -32,10 +32,18 @@ class AIService {
       throw new Error(`Unknown provider: ${config.provider}`);
     }
 
+    // 从环境变量获取 fallback 配置
+    const configWithEnv: AIConfig = {
+      ...config,
+      apiKey: config.apiKey || this.getEnvApiKey(config.provider),
+      baseUrl: config.baseUrl || this.getEnvBaseUrl(config.provider),
+      model: config.model || this.getEnvModel(config.provider),
+    };
+
     // 添加系统提示词
     const messagesWithSystem = this.addSystemPrompt(messages, config.provider);
 
-    return provider.chat(messagesWithSystem, config);
+    return provider.chat(messagesWithSystem, configWithEnv);
   }
 
   // 聊天（流式）
@@ -49,10 +57,48 @@ class AIService {
       throw new Error(`Unknown provider: ${config.provider}`);
     }
 
+    // 从环境变量获取 fallback 配置
+    const configWithEnv: AIConfig = {
+      ...config,
+      apiKey: config.apiKey || this.getEnvApiKey(config.provider),
+      baseUrl: config.baseUrl || this.getEnvBaseUrl(config.provider),
+      model: config.model || this.getEnvModel(config.provider),
+    };
+
     // 添加系统提示词
     const messagesWithSystem = this.addSystemPrompt(messages, config.provider);
 
-    return provider.chatStream(messagesWithSystem, config, onStream);
+    return provider.chatStream(messagesWithSystem, configWithEnv, onStream);
+  }
+
+  // 获取环境变量中的 API Key
+  private getEnvApiKey(provider: AIProvider): string {
+    const envKeys: Record<string, string> = {
+      minimax: import.meta.env.VITE_MINIMAX_API_KEY || '',
+      openai: import.meta.env.VITE_OPENAI_API_KEY || '',
+      openrouter: import.meta.env.VITE_OPENROUTER_API_KEY || '',
+    };
+    return envKeys[provider] || '';
+  }
+
+  // 获取环境变量中的 Base URL
+  private getEnvBaseUrl(provider: AIProvider): string {
+    const envUrls: Record<string, string> = {
+      minimax: import.meta.env.VITE_MINIMAX_BASE_URL || '',
+      openai: import.meta.env.VITE_OPENAI_BASE_URL || '',
+      openrouter: import.meta.env.VITE_OPENROUTER_BASE_URL || '',
+    };
+    return envUrls[provider] || '';
+  }
+
+  // 获取环境变量中的 Model
+  private getEnvModel(provider: AIProvider): string {
+    const envModels: Record<string, string> = {
+      minimax: import.meta.env.VITE_MINIMAX_MODEL || '',
+      openai: import.meta.env.VITE_OPENAI_MODEL || '',
+      openrouter: import.meta.env.VITE_OPENROUTER_MODEL || '',
+    };
+    return envModels[provider] || '';
   }
 
   // 根据提供商添加系统提示词

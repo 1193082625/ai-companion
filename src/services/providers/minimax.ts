@@ -57,7 +57,7 @@ export class MiniMaxProvider extends BaseAIProvider {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${config.apiKey}`,
+        Authorization: `${config.apiKey}`,
       },
       body: JSON.stringify(request),
     });
@@ -83,7 +83,7 @@ export class MiniMaxProvider extends BaseAIProvider {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${config.apiKey}`,
+        Authorization: `${config.apiKey}`,
       },
       body: JSON.stringify(request),
     });

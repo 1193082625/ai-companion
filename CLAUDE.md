@@ -34,14 +34,14 @@ npm run preview          # 预览构建结果
 
 #### 目录结构
 
-| 目录 | 说明 |
-|------|------|
-| `src/pages/` | 页面组件 (ChatPage, SettingsPage) |
-| `src/components/` | 共享组件 |
-| `src/stores/` | Zustand 状态管理 |
-| `src/services/` | AI 服务层 |
-| `src/services/providers/` | AI 提供商实现 |
-| `src/types/` | TypeScript 类型定义 |
+| 目录                      | 说明                              |
+| ------------------------- | --------------------------------- |
+| `src/pages/`              | 页面组件 (ChatPage, SettingsPage) |
+| `src/components/`         | 共享组件                          |
+| `src/stores/`             | Zustand 状态管理                  |
+| `src/services/`           | AI 服务层                         |
+| `src/services/providers/` | AI 提供商实现                     |
+| `src/types/`              | TypeScript 类型定义               |
 
 #### 状态管理
 
@@ -65,15 +65,21 @@ npm run preview          # 预览构建结果
 - **库**: `src-tauri/src/lib.rs`
 
 插件:
+
 - `tauri-plugin-shell`: Shell 命令支持
 - `tauri-plugin-http`: HTTP 请求支持
 
 ## 类型定义 (`src/types/index.ts`)
 
 核心类型:
+
 - `Message`: 聊天消息
 - `ChatSession`: 聊天会话
 - `AIProvider`: AI 提供商枚举
 - `AIConfig`: AI 配置
 - `AppSettings`: 应用设置
 - `WorkMode`: 工作模式 (chat | code | project | content)
+
+## 工作原则
+
+- 自行决定使用哪些skills或mcp完成相关操作

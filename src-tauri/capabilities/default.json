@@ -1,0 +1,16 @@
+{
+  "identifier": "default",
+  "description": "Default capabilities for AI Companion",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "shell:allow-open",
+    {
+      "identifier": "http:default",
+      "allow": [
+        { "url": "http://**" },
+        { "url": "https://**" }
+      ]
+    }
+  ]
+}
