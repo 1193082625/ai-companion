@@ -16,7 +16,7 @@ describe('MessageBubble', () => {
     role: 'assistant',
     content: 'Hello, human!',
     timestamp: Date.now(),
-    provider: 'OpenAI',
+    provider: 'openai',
   };
 
   it('should render user message correctly', () => {
@@ -32,7 +32,7 @@ describe('MessageBubble', () => {
     const content = screen.getByText('Hello, human!');
     expect(content).toBeInTheDocument();
 
-    const provider = screen.getByText('OpenAI');
+    const provider = screen.getByText('openai');
     expect(provider).toBeInTheDocument();
   });
 

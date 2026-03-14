@@ -7,6 +7,10 @@ export type MessageRole = 'user' | 'assistant' | 'system';
 // 工作模式
 export type WorkMode = 'chat' | 'code' | 'project' | 'content';
 
+// 工作模式默认配置（从 prompts 模块导入）
+export type { WorkModeConfig } from '../services/prompts';
+export { WORK_MODE_DEFAULTS } from '../services/prompts';
+
 // 消息类型
 export interface Message {
   id: string;
@@ -38,7 +42,7 @@ export interface AIConfig {
   provider: AIProvider;
   apiKey: string;
   baseUrl?: string;
-  model: string;
+  model?: string;
   temperature?: number;
   maxTokens?: number;
 }

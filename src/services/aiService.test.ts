@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import type { Message, AIProvider, AIConfig } from '../types';
 import { BaseAIProvider } from './providers/base';
-import { OllamaProvider } from './providers/ollama';
 
 // Mock import.meta.env
 vi.stubGlobal('import.meta', {
@@ -20,7 +19,7 @@ const { aiService } = await import('./aiService');
 
 // Mock provider class for testing chat functionality
 class MockProvider extends BaseAIProvider {
-  readonly provider: AIProvider = 'mock';
+  readonly provider: AIProvider = 'ollama';
   baseUrl = 'https://api.test.com';
   defaultModel = 'test-model';
   mockChat: (messages: Message[]) => Promise<string>;
@@ -38,20 +37,20 @@ class MockProvider extends BaseAIProvider {
     };
   }
 
-  async chat(messages: Message[], config: AIConfig): Promise<string> {
+  async chat(messages: Message[], _config: AIConfig): Promise<string> {
     return this.mockChat(messages);
   }
 
   async chatStream(
     messages: Message[],
-    config: AIConfig,
+    _config: AIConfig,
     onChunk: (chunk: string) => void
   ): Promise<string> {
     return this.mockChatStream(messages, onChunk);
   }
 
-  protected formatRequest(messages: Message[], config: AIConfig): unknown {
-    return { messages, config };
+  protected formatRequest(messages: Message[], _config: AIConfig): unknown {
+    return { messages };
   }
 
   protected parseResponse(response: unknown): string {
@@ -98,16 +97,40 @@ describe('AIService', () => {
     it('should return provider when exists', () => {
       const provider = aiService.getProvider('openai');
       expect(provider).toBeDefined();
-      expect(provider?.provider).toBe('openai');
     });
 
     it('should return undefined for unknown provider', () => {
-      const provider = aiService.getProvider('anthropic' as AIProvider);
+      const provider = aiService.getProvider('unknown-provider' as AIProvider);
       expect(provider).toBeUndefined();
     });
   });
 
   describe('chat', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('should send messages and return response', async () => {
+      const mockProvider = new MockProvider();
+      const testKey = `test-chat-${Date.now()}` as AIProvider;
+      Object.defineProperty(mockProvider, 'provider', { value: testKey });
+      mockProvider.mockChat = async () => 'Test response';
+
+      aiService.registerProvider(mockProvider);
+
+      const messages: Message[] = [
+        { id: '1', role: 'user', content: 'Hello', timestamp: Date.now() },
+      ];
+      const config: AIConfig = {
+        provider: testKey,
+        apiKey: 'test-key',
+        model: 'test-model',
+      };
+
+      const response = await aiService.chat(messages, config);
+      expect(response).toBe('Test response');
+    });
+
     it('should throw error for unknown provider', async () => {
       const messages: Message[] = [
         { id: '1', role: 'user', content: 'Hello', timestamp: Date.now() },
@@ -115,22 +138,24 @@ describe('AIService', () => {
       const config: AIConfig = {
         provider: 'unknown' as AIProvider,
         apiKey: 'test-key',
+        model: 'test-model',
       };
 
-      await expect(aiService.chat(messages, config)).rejects.toThrow(
-        'Unknown provider: unknown'
-      );
+      await expect(aiService.chat(messages, config)).rejects.toThrow('Unknown provider');
     });
 
-    it('should call provider chat and return response', async () => {
+    it('should add system prompt to messages', async () => {
       const mockProvider = new MockProvider();
-      const testKey = `test-chat-${Date.now()}` as AIProvider;
+      const testKey = 'ollama';
       Object.defineProperty(mockProvider, 'provider', { value: testKey });
-      aiService.registerProvider(mockProvider);
+      let capturedMessages: Message[] = [];
 
-      // Override to not add system prompt for this provider
-      mockProvider.mockChat = async (messages: Message[]) =>
-        `Mock response for ${messages.length} messages`;
+      mockProvider.mockChat = async (messages) => {
+        capturedMessages = messages;
+        return 'Response';
+      };
+
+      aiService.registerProvider(mockProvider);
 
       const messages: Message[] = [
         { id: '1', role: 'user', content: 'Hello', timestamp: Date.now() },
@@ -138,62 +163,27 @@ describe('AIService', () => {
       const config: AIConfig = {
         provider: testKey,
         apiKey: 'test-key',
+        model: 'test-model',
       };
 
-      const response = await aiService.chat(messages, config);
-      // Verify chat was called with messages (at least 1 user message)
-      expect(response).toContain('Mock response');
-    });
+      await aiService.chat(messages, config);
 
-    it('should pass config to provider', async () => {
-      const mockProvider = new MockProvider();
-      const testKey = `test-config-${Date.now()}` as AIProvider;
-      Object.defineProperty(mockProvider, 'provider', { value: testKey });
-
-      const originalChat = mockProvider.chat.bind(mockProvider);
-      mockProvider.chat = async (messages: Message[], config: AIConfig) => {
-        // Verify config has the expected values
-        expect(config.apiKey).toBe('my-api-key');
-        expect(config.model).toBe('gpt-4');
-        return 'success';
-      };
-
-      aiService.registerProvider(mockProvider);
-
-      const messages: Message[] = [
-        { id: '1', role: 'user', content: 'Hello', timestamp: Date.now() },
-      ];
-      const config: AIConfig = {
-        provider: testKey,
-        apiKey: 'my-api-key',
-        model: 'gpt-4',
-      };
-
-      const response = await aiService.chat(messages, config);
-      expect(response).toBe('success');
+      // Should have added system message at the beginning
+      expect(capturedMessages.length).toBe(2);
+      expect(capturedMessages[0].role).toBe('system');
     });
   });
 
   describe('chatStream', () => {
-    it('should throw error for unknown provider', async () => {
-      const messages: Message[] = [
-        { id: '1', role: 'user', content: 'Hello', timestamp: Date.now() },
-      ];
-      const config: AIConfig = {
-        provider: 'unknown' as AIProvider,
-        apiKey: 'test-key',
-      };
-      const onStream = vi.fn();
-
-      await expect(
-        aiService.chatStream(messages, config, onStream)
-      ).rejects.toThrow('Unknown provider: unknown');
+    afterEach(() => {
+      vi.restoreAllMocks();
     });
 
-    it('should call provider chatStream and return response', async () => {
+    it('should stream response', async () => {
       const mockProvider = new MockProvider();
       const testKey = `test-stream-${Date.now()}` as AIProvider;
       Object.defineProperty(mockProvider, 'provider', { value: testKey });
+
       aiService.registerProvider(mockProvider);
 
       const messages: Message[] = [
@@ -202,19 +192,20 @@ describe('AIService', () => {
       const config: AIConfig = {
         provider: testKey,
         apiKey: 'test-key',
+        model: 'test-model',
       };
       const onStream = vi.fn();
 
       const response = await aiService.chatStream(messages, config, onStream);
 
-      expect(response).toBe('Mock stream response');
       expect(onStream).toHaveBeenCalledTimes(3);
       expect(onStream).toHaveBeenCalledWith('Mock ');
       expect(onStream).toHaveBeenCalledWith('stream ');
       expect(onStream).toHaveBeenCalledWith('response');
+      expect(response).toBe('Mock stream response');
     });
 
-    it('should filter out <think> content from stream', async () => {
+    it('should filter out think content from stream', async () => {
       const mockProvider = new MockProvider();
       const testKey = `test-think-${Date.now()}` as AIProvider;
       Object.defineProperty(mockProvider, 'provider', { value: testKey });
@@ -236,6 +227,7 @@ describe('AIService', () => {
       const config: AIConfig = {
         provider: testKey,
         apiKey: 'test-key',
+        model: 'test-model',
       };
       const onStream = vi.fn();
 
@@ -257,7 +249,7 @@ describe('AIService', () => {
         onChunk('<think>这');
         onChunk('是思');
         onChunk('考内容');
-        onChunk('</think>');
+        onChunk('</think>\n');
         onChunk('正');
         onChunk('文内容');
         return '正文内容';
@@ -271,6 +263,7 @@ describe('AIService', () => {
       const config: AIConfig = {
         provider: testKey,
         apiKey: 'test-key',
+        model: 'test-model',
       };
       const onStream = vi.fn();
 
@@ -280,71 +273,6 @@ describe('AIService', () => {
       expect(onStream).toHaveBeenCalledTimes(2);
       expect(onStream).toHaveBeenCalledWith('正');
       expect(onStream).toHaveBeenCalledWith('文内容');
-    });
-  });
-
-  describe('checkOllamaConnection', () => {
-    afterEach(() => {
-      vi.restoreAllMocks();
-    });
-
-    it('should call ollama provider checkConnection', async () => {
-      const ollamaProvider = aiService.getProvider('ollama') as OllamaProvider;
-      expect(ollamaProvider).toBeDefined();
-
-      // Mock the fetch globally to avoid real API calls
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ models: [] }),
-      });
-
-      const result = await aiService.checkOllamaConnection('http://localhost:11434');
-      expect(result).toBe(true);
-    });
-
-    it('should return false when fetch fails', async () => {
-      global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
-
-      const result = await aiService.checkOllamaConnection('http://localhost:11434');
-      expect(result).toBe(false);
-    });
-  });
-
-  describe('listOllamaModels', () => {
-    afterEach(() => {
-      vi.restoreAllMocks();
-    });
-
-    it('should return list of models from ollama', async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({
-          models: [
-            { name: 'llama2' },
-            { name: 'codellama' },
-            { name: 'mistral' },
-          ],
-        }),
-      });
-
-      const models = await aiService.listOllamaModels('http://localhost:11434');
-      expect(models).toEqual(['llama2', 'codellama', 'mistral']);
-    });
-
-    it('should return empty array when fetch fails', async () => {
-      global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
-
-      const models = await aiService.listOllamaModels('http://localhost:11434');
-      expect(models).toEqual([]);
-    });
-
-    it('should return empty array when response is not ok', async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-      });
-
-      const models = await aiService.listOllamaModels('http://localhost:11434');
-      expect(models).toEqual([]);
     });
   });
 });

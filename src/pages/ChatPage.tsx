@@ -67,7 +67,7 @@ export const ChatPage: React.FC<ChatPageProps> = ({ onOpenSettings }) => {
     const config = settings.providers[session?.provider || settings.defaultProvider];
 
     try {
-      // 流式调用 AI
+      // 流式调用 AI，传递 session 以应用工作模式配置
       const fullResponse = await aiService.chatStream(
         session?.messages || [],
         {
@@ -77,7 +77,8 @@ export const ChatPage: React.FC<ChatPageProps> = ({ onOpenSettings }) => {
         },
         (chunk) => {
           appendStreamingContent(chunk);
-        }
+        },
+        session ?? undefined // 传递 session 以应用工作模式系统提示词和参数
       );
 
       // 保存完整响应

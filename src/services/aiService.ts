@@ -1,4 +1,5 @@
-import type { Message, AIProvider, AIConfig } from '../types';
+import type { Message, AIProvider, AIConfig, ChatSession, WorkMode } from '../types';
+import { WORK_MODE_PROMPTS, WORK_MODE_DEFAULTS } from './prompts';
 import { BaseAIProvider, MiniMaxProvider, OpenAIProvider, OllamaProvider } from './providers';
 
 type StreamCallback = (chunk: string) => void;
@@ -85,31 +86,10 @@ class AIService {
   }
 
   // 聊天（非流式）
-  async chat(messages: Message[], config: AIConfig): Promise<string> {
-    const provider = this.providers.get(config.provider);
-    if (!provider) {
-      throw new Error(`Unknown provider: ${config.provider}`);
-    }
-
-    // 从环境变量获取 fallback 配置
-    const configWithEnv: AIConfig = {
-      ...config,
-      apiKey: config.apiKey || this.getEnvApiKey(config.provider),
-      baseUrl: config.baseUrl || this.getEnvBaseUrl(config.provider),
-      model: config.model || this.getEnvModel(config.provider),
-    };
-
-    // 添加系统提示词
-    const messagesWithSystem = this.addSystemPrompt(messages, config.provider);
-
-    return provider.chat(messagesWithSystem, configWithEnv);
-  }
-
-  // 聊天（流式）
-  async chatStream(
+  async chat(
     messages: Message[],
     config: AIConfig,
-    onStream: StreamCallback
+    session?: ChatSession
   ): Promise<string> {
     const provider = this.providers.get(config.provider);
     if (!provider) {
@@ -124,8 +104,42 @@ class AIService {
       model: config.model || this.getEnvModel(config.provider),
     };
 
-    // 添加系统提示词
-    const messagesWithSystem = this.addSystemPrompt(messages, config.provider);
+    // 应用工作模式参数
+    const effectiveConfig = this.getEffectiveConfig(session, configWithEnv);
+
+    // 添加系统提示词（根据工作模式）
+    const workMode = session?.type;
+    const messagesWithSystem = this.addSystemPrompt(messages, config.provider, workMode);
+
+    return provider.chat(messagesWithSystem, effectiveConfig);
+  }
+
+  // 聊天（流式）
+  async chatStream(
+    messages: Message[],
+    config: AIConfig,
+    onStream: StreamCallback,
+    session?: ChatSession
+  ): Promise<string> {
+    const provider = this.providers.get(config.provider);
+    if (!provider) {
+      throw new Error(`Unknown provider: ${config.provider}`);
+    }
+
+    // 从环境变量获取 fallback 配置
+    const configWithEnv: AIConfig = {
+      ...config,
+      apiKey: config.apiKey || this.getEnvApiKey(config.provider),
+      baseUrl: config.baseUrl || this.getEnvBaseUrl(config.provider),
+      model: config.model || this.getEnvModel(config.provider),
+    };
+
+    // 应用工作模式参数
+    const effectiveConfig = this.getEffectiveConfig(session, configWithEnv);
+
+    // 添加系统提示词（根据工作模式）
+    const workMode = session?.type;
+    const messagesWithSystem = this.addSystemPrompt(messages, config.provider, workMode);
 
     // 创建过滤器实例，用于过滤 <think> 标签内容
     const thinkFilter = new ThinkContentFilter();
@@ -142,7 +156,7 @@ class AIService {
 
     const fullContent = await provider.chatStream(
       messagesWithSystem,
-      configWithEnv,
+      effectiveConfig,
       filteredStreamCallback
     );
 
@@ -186,23 +200,35 @@ class AIService {
     return envModels[provider] || '';
   }
 
-  // 根据提供商添加系统提示词
-  private addSystemPrompt(messages: Message[], provider: AIProvider): Message[] {
-    const systemPrompts: Record<AIProvider, string> = {
-      minimax: '你是一个有帮助的AI助手。请用中文回复用户。',
-      openai: 'You are a helpful AI assistant.',
-      anthropic: 'You are a helpful AI assistant.',
-      zhipu: '你是一个有帮助的AI助手。请用中文回复用户。',
-      ollama: 'You are a helpful AI assistant.',
-      openrouter: 'You are a helpful AI assistant.',
+  // 根据提供商和工作模式添加系统提示词
+  private addSystemPrompt(
+    messages: Message[],
+    provider: AIProvider,
+    workMode?: WorkMode
+  ): Message[] {
+    // 根据工作模式添加提示词
+    const modePrompt = workMode ? WORK_MODE_PROMPTS[workMode] : '';
+
+    // AI 提供商基础提示词
+    const providerPrompt: Record<AIProvider, string> = {
+      minimax: '请用中文回复用户。',
+      openai: 'Please respond in the same language as the user.',
+      anthropic: 'Please respond in the same language as the user.',
+      zhipu: '请用中文回复用户。',
+      ollama: 'Please respond in the same language as the user.',
+      openrouter: 'Please respond in the same language as the user.',
     };
 
-    const systemPrompt = systemPrompts[provider];
+    const providerBase = providerPrompt[provider] || '';
+    const systemPrompt = [modePrompt, providerBase].filter(Boolean).join('\n\n');
 
     // 检查是否已有系统消息
     const hasSystemMessage = messages.some((m) => m.role === 'system');
     if (hasSystemMessage) {
-      return messages;
+      // 更新现有系统消息
+      return messages.map((m) =>
+        m.role === 'system' ? { ...m, content: systemPrompt } : m
+      );
     }
 
     if (systemPrompt) {
@@ -218,6 +244,21 @@ class AIService {
     }
 
     return messages;
+  }
+
+  // 根据会话类型获取有效的配置参数
+  private getEffectiveConfig(
+    session: ChatSession | undefined,
+    baseConfig: AIConfig
+  ): AIConfig {
+    if (!session) return baseConfig;
+
+    const modeConfig = WORK_MODE_DEFAULTS[session.type];
+    return {
+      ...baseConfig,
+      temperature: baseConfig.temperature ?? modeConfig.temperature,
+      maxTokens: baseConfig.maxTokens ?? modeConfig.maxTokens,
+    };
   }
 
   // 检查 Ollama 连接状态
