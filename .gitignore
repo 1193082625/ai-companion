@@ -42,3 +42,9 @@ pnpm-debug.log*
 
 # OS
 Thumbs.db
+
+.env.local
+LEARNING.md
+TODO.md
+TASK.md
+CLAUDE.md

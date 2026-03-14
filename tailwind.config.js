@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
@@ -7,20 +8,20 @@ export default {
   theme: {
     extend: {
       colors: {
-        // 深色主题配色
-        'bg-primary': '#0f0f1a',
-        'bg-secondary': '#1a1a2e',
-        'bg-tertiary': '#252542',
-        'bg-card': '#1e1e36',
+        // 使用 CSS 变量实现主题切换
+        'bg-primary': 'var(--bg-primary)',
+        'bg-secondary': 'var(--bg-secondary)',
+        'bg-tertiary': 'var(--bg-tertiary)',
+        'bg-card': 'var(--bg-card)',
         'accent': {
           DEFAULT: '#667eea',
           hover: '#764ba2',
           light: '#8b9fef',
         },
-        'text-primary': '#e2e8f0',
-        'text-secondary': '#94a3b8',
-        'text-muted': '#64748b',
-        'border': '#2d2d4a',
+        'text-primary': 'var(--text-primary)',
+        'text-secondary': 'var(--text-secondary)',
+        'text-muted': 'var(--text-muted)',
+        'border': 'var(--border)',
       },
       fontFamily: {
         'mono': ['JetBrains Mono', 'monospace'],
