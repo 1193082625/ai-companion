@@ -6,7 +6,7 @@ interface ChatState {
   sessions: ChatSession[];
   currentSessionId: string | null;
   isLoading: boolean;
-  streamingContent: string;
+  streamingContent: string; // 兼容旧版本，用于当前活动会话的流式输出
 
   // Actions
   createSession: (type: WorkMode, title?: string) => ChatSession;
@@ -20,6 +20,12 @@ interface ChatState {
   appendStreamingContent: (chunk: string) => void;
   clearStreamingContent: () => void;
   getCurrentSession: () => ChatSession | null;
+  // 新增：会话级别的流式内容操作
+  appendSessionStreamingContent: (sessionId: string, chunk: string) => void;
+  clearSessionStreamingContent: (sessionId: string) => void;
+  // 上下文管理
+  compactSessionMessages: (sessionId: string) => void;
+  clearSessionMessages: (sessionId: string) => void;
 }
 
 export const useChatStore = create<ChatState>()(
@@ -116,15 +122,80 @@ export const useChatStore = create<ChatState>()(
 
       clearStreamingContent: () => set({ streamingContent: '' }),
 
+      // 会话级别的流式内容操作
+      appendSessionStreamingContent: (sessionId, chunk) => {
+        set((state) => ({
+          sessions: state.sessions.map((s) =>
+            s.id === sessionId
+              ? { ...s, streamingContent: (s.streamingContent || '') + chunk }
+              : s
+          ),
+        }));
+      },
+
+      clearSessionStreamingContent: (sessionId) => {
+        set((state) => ({
+          sessions: state.sessions.map((s) =>
+            s.id === sessionId
+              ? { ...s, streamingContent: '' }
+              : s
+          ),
+        }));
+      },
+
       getCurrentSession: () => {
         const state = get();
         return (
           state.sessions.find((s) => s.id === state.currentSessionId) || null
         );
       },
+
+      // 压缩会话消息，保留系统消息和用户关键需求
+      compactSessionMessages: (sessionId) => {
+        set((state) => ({
+          sessions: state.sessions.map((s) => {
+            if (s.id !== sessionId) return s;
+
+            // 保留系统消息和最近的用户消息
+            const systemMessages = s.messages.filter((m) => m.role === 'system');
+            const userMessages = s.messages.filter((m) => m.role === 'user');
+            const assistantMessages = s.messages.filter((m) => m.role === 'assistant');
+
+            // 保留最近 2 轮对话
+            const recentUserMessages = userMessages.slice(-4);
+            const recentAssistantMessages = assistantMessages.slice(-4);
+
+            // 合并并按时间排序
+            const compactedMessages: Message[] = [
+              ...systemMessages,
+              ...recentUserMessages,
+              ...recentAssistantMessages,
+            ].sort((a, b) => a.timestamp - b.timestamp);
+
+            return { ...s, messages: compactedMessages };
+          }),
+        }));
+      },
+
+      // 清空会话消息
+      clearSessionMessages: (sessionId) => {
+        set((state) => ({
+          sessions: state.sessions.map((s) =>
+            s.id === sessionId ? { ...s, messages: [] } : s
+          ),
+        }));
+      },
     }),
     {
       name: 'ai-companion-chat',
+      // 排除 streamingContent 的持久化，这是临时状态
+      partialize: (state) => ({
+        sessions: state.sessions.map((s) => ({
+          ...s,
+          streamingContent: undefined,
+        })),
+        currentSessionId: state.currentSessionId,
+      }),
     }
   )
 );

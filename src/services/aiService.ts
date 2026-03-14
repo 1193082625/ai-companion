@@ -154,7 +154,7 @@ class AIService {
       }
     };
 
-    const fullContent = await provider.chatStream(
+    await provider.chatStream(
       messagesWithSystem,
       effectiveConfig,
       filteredStreamCallback

@@ -50,7 +50,7 @@ export const useSettingsStore = create<SettingsState>()(
           settings: {
             ...state.settings,
             defaultProvider: provider,
-            defaultModel: state.settings.providers[provider].model,
+            defaultModel: state.settings.providers[provider].model || '',
           },
         })),
 

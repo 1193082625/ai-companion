@@ -35,6 +35,7 @@ export interface ChatSession {
   updatedAt: number;
   model?: string;
   provider?: AIProvider;
+  streamingContent?: string; // 会话级别的流式输出内容
 }
 
 // AI 配置

@@ -45,7 +45,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
   };
 
   return (
-    <div className="relative flex items-end gap-2 p-4 bg-bg-secondary border-t border-border">
+    <div className="relative flex items-stretch gap-2 p-4 bg-bg-secondary border-t border-border">
       <div className="flex-1 relative">
         <textarea
           ref={textareaRef}
@@ -55,7 +55,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
           placeholder={placeholder}
           disabled={disabled}
           rows={1}
-          className="w-full px-4 py-3 bg-bg-tertiary border border-border rounded-xl text-text-primary placeholder-text-muted resize-none focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/50 transition-all disabled:opacity-50"
+          className="w-full px-4 py-3 bg-bg-tertiary border border-border rounded-xl text-text-primary placeholder-text-muted resize-none focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/50 transition-all disabled:opacity-50 shadow-inner"
           style={{ maxHeight: '200px', minHeight: '48px' }}
         />
       </div>
