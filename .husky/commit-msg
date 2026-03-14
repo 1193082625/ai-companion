@@ -1,0 +1,11 @@
+#!/bin/sh
+# Auto push to remote after commit
+
+# Get current branch
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+# Push to remote
+echo "Auto-pushing to origin/$BRANCH..."
+git push origin $BRANCH
+
+echo "Push complete!"
