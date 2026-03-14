@@ -3,6 +3,65 @@ import { BaseAIProvider, MiniMaxProvider, OpenAIProvider, OllamaProvider } from 
 
 type StreamCallback = (chunk: string) => void;
 
+/**
+ * 用于过滤流式输出中 <think> 标签内容的类
+ * 支持跨 chunk 的思考内容过滤
+ */
+class ThinkContentFilter {
+  private buffer = '';
+  private inThinkBlock = false;
+
+  /**
+   * 处理一个 chunk，返回过滤后的内容
+   */
+  process(chunk: string): string {
+    this.buffer += chunk;
+    let result = '';
+
+    while (this.buffer.length > 0) {
+      if (this.inThinkBlock) {
+        // 查找结束标签
+        const endIndex = this.buffer.toLowerCase().indexOf('</think>');
+        if (endIndex !== -1) {
+          // 跳过思考块内容
+          this.buffer = this.buffer.slice(endIndex + 9);
+          this.inThinkBlock = false;
+        } else {
+          // 整个 buffer 都在思考块内
+          this.buffer = '';
+          break;
+        }
+      } else {
+        // 查找开始标签
+        const startIndex = this.buffer.toLowerCase().indexOf('<think>');
+        if (startIndex !== -1) {
+          // 添加开始标签之前的内容
+          result += this.buffer.slice(0, startIndex);
+          this.buffer = this.buffer.slice(startIndex + 9);
+          this.inThinkBlock = true;
+        } else {
+          // 没有开始标签，添加整个 buffer
+          result += this.buffer;
+          this.buffer = '';
+          break;
+        }
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * 处理完成后的清理，返回剩余内容
+   */
+  flush(): string {
+    const remaining = this.buffer;
+    this.buffer = '';
+    this.inThinkBlock = false;
+    return remaining;
+  }
+}
+
 class AIService {
   private providers: Map<AIProvider, BaseAIProvider>;
 
@@ -68,7 +127,33 @@ class AIService {
     // 添加系统提示词
     const messagesWithSystem = this.addSystemPrompt(messages, config.provider);
 
-    return provider.chatStream(messagesWithSystem, configWithEnv, onStream);
+    // 创建过滤器实例，用于过滤 <think> 标签内容
+    const thinkFilter = new ThinkContentFilter();
+    let filteredFullContent = '';
+
+    // 包装回调函数，过滤掉 <think> 标签内容
+    const filteredStreamCallback: StreamCallback = (chunk) => {
+      const filteredChunk = thinkFilter.process(chunk);
+      if (filteredChunk) {
+        filteredFullContent += filteredChunk;
+        onStream(filteredChunk);
+      }
+    };
+
+    const fullContent = await provider.chatStream(
+      messagesWithSystem,
+      configWithEnv,
+      filteredStreamCallback
+    );
+
+    // 处理完成后清理，添加剩余内容
+    const remainingContent = thinkFilter.flush();
+    if (remainingContent) {
+      filteredFullContent += remainingContent;
+      onStream(remainingContent);
+    }
+
+    return filteredFullContent;
   }
 
   // 获取环境变量中的 API Key

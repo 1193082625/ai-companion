@@ -67,7 +67,7 @@ export const ChatPage: React.FC<ChatPageProps> = ({ onOpenSettings }) => {
     try {
       // 流式调用 AI
       const fullResponse = await aiService.chatStream(
-        [],
+        session?.messages || [],
         {
           ...config,
           provider: session?.provider || settings.defaultProvider,

@@ -1,0 +1,7 @@
+#!/bin.sh
+# Auto stage all modified files before commit
+
+# Stage all modified files (except deleted)
+git add -A
+
+echo "Auto-staged all modified files"

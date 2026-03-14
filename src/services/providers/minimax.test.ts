@@ -188,7 +188,7 @@ describe('MiniMaxProvider', () => {
         expect.objectContaining({
           method: 'POST',
           headers: expect.objectContaining({
-            Authorization: 'test-api-key',
+            Authorization: 'Bearer test-api-key',
           }),
         })
       );

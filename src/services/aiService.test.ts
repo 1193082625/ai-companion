@@ -213,6 +213,74 @@ describe('AIService', () => {
       expect(onStream).toHaveBeenCalledWith('stream ');
       expect(onStream).toHaveBeenCalledWith('response');
     });
+
+    it('should filter out <think> content from stream', async () => {
+      const mockProvider = new MockProvider();
+      const testKey = `test-think-${Date.now()}` as AIProvider;
+      Object.defineProperty(mockProvider, 'provider', { value: testKey });
+
+      // Mock provider with think content
+      mockProvider.mockChatStream = async (_messages: Message[], onChunk: (chunk: string) => void) => {
+        onChunk('<think>');
+        onChunk('正在思考...');
+        onChunk('</think>');
+        onChunk('你好！很高兴见到你。');
+        return '你好！很高兴见到你。';
+      };
+
+      aiService.registerProvider(mockProvider);
+
+      const messages: Message[] = [
+        { id: '1', role: 'user', content: '你好', timestamp: Date.now() },
+      ];
+      const config: AIConfig = {
+        provider: testKey,
+        apiKey: 'test-key',
+      };
+      const onStream = vi.fn();
+
+      const response = await aiService.chatStream(messages, config, onStream);
+
+      // Should only receive filtered content (only the last chunk after think block)
+      expect(onStream).toHaveBeenCalledTimes(1);
+      expect(onStream).toHaveBeenCalledWith('你好！很高兴见到你。');
+      expect(response).toBe('你好！很高兴见到你。');
+    });
+
+    it('should filter out think content when it spans multiple chunks', async () => {
+      const mockProvider = new MockProvider();
+      const testKey = `test-think-multi-${Date.now()}` as AIProvider;
+      Object.defineProperty(mockProvider, 'provider', { value: testKey });
+
+      // Mock provider with think content split across chunks
+      mockProvider.mockChatStream = async (_messages: Message[], onChunk: (chunk: string) => void) => {
+        onChunk('<think>这');
+        onChunk('是思');
+        onChunk('考内容');
+        onChunk('</think>');
+        onChunk('正');
+        onChunk('文内容');
+        return '正文内容';
+      };
+
+      aiService.registerProvider(mockProvider);
+
+      const messages: Message[] = [
+        { id: '1', role: 'user', content: 'Hello', timestamp: Date.now() },
+      ];
+      const config: AIConfig = {
+        provider: testKey,
+        apiKey: 'test-key',
+      };
+      const onStream = vi.fn();
+
+      await aiService.chatStream(messages, config, onStream);
+
+      // Should only receive content outside think tags
+      expect(onStream).toHaveBeenCalledTimes(2);
+      expect(onStream).toHaveBeenCalledWith('正');
+      expect(onStream).toHaveBeenCalledWith('文内容');
+    });
   });
 
   describe('checkOllamaConnection', () => {
